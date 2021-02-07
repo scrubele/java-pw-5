@@ -26,8 +26,8 @@ public class FilmDaoTestCase {
 
     @Before
     public void initDb() throws Exception {
-        Connection connection = DatabaseConnector.getConnectionFromProps();
 //        Connection connection = DataSourceFactory.getDataSource().getConnection();
+        Connection connection = DatabaseConnector.getConnectionFromProps();
         Statement stmt = connection.createStatement();
         stmt.executeUpdate(
                 "CREATE TABLE IF NOT EXISTS genre (idgenre INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT , name VARCHAR(50) NOT NULL);");
@@ -72,8 +72,11 @@ public class FilmDaoTestCase {
                         "summary of the second film")
         ));
         List<Film> addedFilms = filmDao.addFilms(fIlms);
+        System.out.println(addedFilms);
         assertThat(addedFilms.size()).isEqualTo(2);
         List<Film> receivedFilms = filmDao.listFilmsByGenre(genre.getName());
+        System.out.println(receivedFilms);
+        System.out.println(addedFilms);
         assertThat(receivedFilms.equals(addedFilms)).isTrue();
     }
 
@@ -95,5 +98,13 @@ public class FilmDaoTestCase {
         resultSet.close();
         statement.close();
         connection.close();
+    }
+
+    @Test
+    public void shouldGetById(){
+        List<Film> films = filmDao.listFilms();
+//        System.out.println(films);
+        Film film = filmDao.getFilm(1);
+//        System.out.println(film);
     }
 }

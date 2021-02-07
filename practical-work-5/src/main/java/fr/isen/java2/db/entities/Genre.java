@@ -3,7 +3,6 @@ package fr.isen.java2.db.entities;
 import java.util.Objects;
 
 public class Genre {
-
     private Integer id;
     private String name;
 

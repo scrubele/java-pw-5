@@ -1,80 +1,68 @@
 package fr.isen.java2.db.daos;
 
+import fr.isen.java2.db.database.Database;
 import fr.isen.java2.db.entities.Film;
 
-import java.sql.*;
+import java.sql.Date;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static fr.isen.java2.db.daos.DataSourceFactory.getDataSource;
-
 public class FilmDao {
 
+    private final Database database = new Database();
     private final String tableName = "film";
+    private final Object[] columnNames = {"title", "release_date", "genre_id", "duration", "director", "summary"};
     private final GenreDao genreDao = new GenreDao();
     private List<Film> films = new ArrayList<>();
 
-
     public List<Film> listFilms() {
         films = new ArrayList<>();
-        String sqlQuery = String.format("select * from %s JOIN genre ON film.genre_id = genre.idgenre", tableName);
         try (
-                Connection connection = getDataSource().getConnection();
-                PreparedStatement statement = connection.prepareStatement(sqlQuery, Statement.RETURN_GENERATED_KEYS)
+                ResultSet results = database.select(tableName, null, "genre",
+                        "film.genre_id = genre.idgenre")
         ) {
-            try (ResultSet results = statement.executeQuery()) {
-                while (results.next()) {
-                    Film film = this.getFilmFromResultSet(results);
-                    films.add(film);
-                }
+            while (results.next()) {
+                Film film = this.getFilmFromResultSet(results);
+                films.add(film);
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
         }
         return films;
     }
 
     public List<Film> listFilmsByGenre(String genreName) {
         films = new ArrayList<>();
-        String sqlQuery = String.format("SELECT * FROM %s JOIN genre ON film.genre_id = genre.idgenre " +
-                "WHERE genre.name =?", tableName);
+        Object[] params = {genreName};
         try (
-                Connection connection = getDataSource().getConnection();
-                PreparedStatement statement = connection.prepareStatement(sqlQuery, Statement.RETURN_GENERATED_KEYS)
+                ResultSet results = database.select(tableName, null, "genre",
+                        "film.genre_id = genre.idgenre", "genre.name=?", params)
         ) {
-            statement.setString(1, genreName);
-            try (ResultSet results = statement.executeQuery()) {
-                while (results.next()) {
-                    Film film = this.getFilmFromResultSet(results);
-                    films.add(film);
-                }
+            while (results.next()) {
+                Film film = this.getFilmFromResultSet(results);
+                films.add(film);
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
         }
         return films;
     }
 
     public Film addFilm(Film film) {
-        String sqlQuery = String.format("insert into %s(title, release_date, genre_id, duration, director, " +
-                "summary) VALUES(?,?,?,?,?,?)", tableName);
+        Object[] values = {
+                film.getTitle(), Date.valueOf(film.getReleaseDate()), film.getGenre().getId(), film.getDuration(),
+                film.getDirector(), film.getSummary()
+        };
         try (
-                Connection connection = getDataSource().getConnection();
-                PreparedStatement statement = connection.prepareStatement(sqlQuery, Statement.RETURN_GENERATED_KEYS)
+                ResultSet ids = database.insert(tableName, columnNames, values)
         ) {
-            statement.setString(1, film.getTitle());
-            statement.setDate(2, Date.valueOf(film.getReleaseDate()));
-            statement.setInt(3, film.getGenre().getId());
-            statement.setInt(4, film.getDuration());
-            statement.setString(5, film.getDirector());
-            statement.setString(6, film.getSummary());
-            statement.executeUpdate();
-            ResultSet ids = statement.getGeneratedKeys();
             if (ids.next()) {
-                return this.getById(ids.getInt(1));
+                return this.getFilm(ids.getInt(1));
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
         }
         return null;
     }
@@ -87,20 +75,18 @@ public class FilmDao {
         return resultList;
     }
 
-    public Film getById(Integer genreId) {
-        String sqlQuery = String.format("select * from %s where idfilm=?", tableName);
+    public Film getFilm(Integer id) {
+        Object[] columnNames = null;
+        Object[] params = {id};
         try (
-                Connection connection = getDataSource().getConnection();
-                PreparedStatement statement = connection.prepareStatement(sqlQuery, Statement.RETURN_GENERATED_KEYS)
+                ResultSet results = database.select(tableName, columnNames, "idfilm=?", params)
         ) {
-            statement.setInt(1, genreId);
-            try (ResultSet results = statement.executeQuery()) {
-                if (results.next()) {
-                    return this.getFilmFromResultSet(results);
-                }
+
+            if (results.next()) {
+                return this.getFilmFromResultSet(results);
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
         }
         return null;
     }
@@ -108,12 +94,12 @@ public class FilmDao {
     public Film getFilmFromResultSet(ResultSet results) throws SQLException {
         return new Film(
                 results.getInt("idfilm"),
-                results.getString("title"),
-                results.getDate("release_date").toLocalDate(),
-                genreDao.getById(results.getInt("genre_id")),
-                results.getInt("duration"),
-                results.getString("director"),
-                results.getString("summary")
+                results.getString(String.valueOf(columnNames[0])),
+                results.getDate(String.valueOf(columnNames[1])).toLocalDate(),
+                genreDao.getById(results.getInt(String.valueOf(columnNames[2]))),
+                results.getInt(String.valueOf(columnNames[3])),
+                results.getString(String.valueOf(columnNames[4])),
+                results.getString(String.valueOf(columnNames[5]))
         );
     }
 }

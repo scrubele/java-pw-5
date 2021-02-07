@@ -1,5 +1,6 @@
 package fr.isen.java2.db.daos;
 
+import fr.isen.java2.db.database.DatabaseConnector;
 import fr.isen.java2.db.entities.Genre;
 import org.junit.Before;
 import org.junit.Test;
@@ -12,14 +13,14 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
-
 public class GenreDaoTestCase {
 
     private GenreDao genreDao = new GenreDao();
 
     @Before
     public void initDatabase() throws Exception {
-        Connection connection = DataSourceFactory.getDataSource().getConnection();
+        Connection connection = DatabaseConnector.getConnectionFromProps();
+//        Connection connection = DataSourceFactory.getDataSource().getConnection();
         Statement stmt = connection.createStatement();
         stmt.executeUpdate(
                 "CREATE TABLE IF NOT EXISTS genre (idgenre INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT , name VARCHAR(50) NOT NULL);");

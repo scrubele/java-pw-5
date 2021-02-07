@@ -1,5 +1,6 @@
 package fr.isen.java2.db.daos;
 
+import fr.isen.java2.db.database.Database;
 import fr.isen.java2.db.entities.Genre;
 
 import java.sql.*;
@@ -10,6 +11,9 @@ import static fr.isen.java2.db.daos.DataSourceFactory.getDataSource;
 
 public class GenreDao {
 
+    private final Database database = new Database();
+    private final String tableName = "genre";
+    private final Object[] columnNames = {"name"};
     List<Genre> genres = new ArrayList<>();
 
     public List<Genre> listGenres() {
@@ -27,22 +31,17 @@ public class GenreDao {
         } catch (SQLException throwable) {
             throwable.printStackTrace();
         }
-
         return genres;
     }
 
     public Genre getGenre(String name) {
-        String sqlQuery = "select * from genre where name=?";
+        Object[] columnNames = null;
+        Object[] params = {name};
         try (
-                Connection connection = getDataSource().getConnection();
-                PreparedStatement statement = connection.prepareStatement(sqlQuery, Statement.RETURN_GENERATED_KEYS)
+                ResultSet results = database.select(tableName, columnNames, "name=?", params)
         ) {
-            statement.setString(1, name);
-            try (ResultSet resultSet = statement.executeQuery()) {
-                if (resultSet.next()) {
-                    return new Genre(resultSet.getInt("idgenre"), resultSet.getString("name"));
-                }
-
+            if (results.next()) {
+                return this.getGenreFromResultSet(results);
             }
         } catch (SQLException throwables) {
             throwables.printStackTrace();
@@ -51,18 +50,13 @@ public class GenreDao {
     }
 
     public Genre addGenre(String name) throws SQLException {
-        String sqlQuery = "insert into genre(name) VALUES(?)";
+        Object[] values = {name};
         try (
-                Connection connection = getDataSource().getConnection();
-                PreparedStatement statement = connection.prepareStatement(sqlQuery, Statement.RETURN_GENERATED_KEYS)
+                ResultSet ids = database.insert(tableName, columnNames, values)
         ) {
-            statement.setString(1, name);
-            statement.executeUpdate();
-            ResultSet ids = statement.getGeneratedKeys();
             if (ids.next()) {
-                return new Genre(ids.getInt(1), name);
+                return this.getById(ids.getInt(1));
             }
-
         } catch (SQLException throwables) {
             throwables.printStackTrace();
         }
@@ -70,21 +64,25 @@ public class GenreDao {
     }
 
     public Genre getById(Integer genreId) {
-        String sqlQuery = "select * from genre where idgenre=?";
+        Object[] columnNames = null;
+        Object[] params = {genreId};
         try (
-                Connection connection = getDataSource().getConnection();
-                PreparedStatement statement = connection.prepareStatement(sqlQuery, Statement.RETURN_GENERATED_KEYS)
+                ResultSet results = database.select(tableName, columnNames, "idgenre=?", params)
         ) {
-            statement.setInt(1, genreId);
-            try (ResultSet results = statement.executeQuery()) {
-                if (results.next()) {
-                    return new Genre(results.getInt("idgenre"), results.getString("name"));
-                }
+            if (results.next()) {
+                return this.getGenreFromResultSet(results);
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
         }
         return null;
+    }
+
+    public Genre getGenreFromResultSet(ResultSet results) throws SQLException {
+        return new Genre(
+                results.getInt("idgenre"),
+                results.getString(String.valueOf(columnNames[0]))
+        );
     }
 }
 
